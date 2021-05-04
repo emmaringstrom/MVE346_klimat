@@ -1,0 +1,14 @@
+
+function imp = impulssvar(t,A,tao)
+    
+    imp = 0;
+    tao1 = zeros(500,5)
+    for j = t
+        tao1(:,j) = tao(t);
+    end
+    
+    for i = 1:5
+        imp = imp + A(i) * exp(-t/tao1(i));
+    end
+end
+
