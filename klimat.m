@@ -34,7 +34,8 @@ t = 1765:2500;
 plot(t,conc,'m')
 hold on
 plot(t,CO2ConcRCP45,'g')
-legend('Estimation','Actual values','Location','northwest')
+legend('Our estimation','RCP 4.5','Location','northwest')
+xlabel('Year'), ylabel('CO_2 concentration (ppm)')
 
 
 %% Uppgift 1.2
@@ -94,25 +95,21 @@ clc, clear, clf
 A = [0.113 0.213 0.258 0.273 0.1430];
 tao_0 = [2.0 12.2 50.4 243.3 Inf];
 k = 3.06*1e-3;
+n = length(A);
 
 %Tidskonstant
-tao1 = @(t) tao_0*(1 + k * 0);
-tao2 = @(t) tao_0*(1 + k * 140);
-tao3 = @(t) tao_0*(1 + k * 560);
-tao4 = @(t) tao_0*(1 + k * 1680);
+tao = @(U) tao_0*(1 + k*U);
 
 %Impulssvaret
-t = 0:500;
-I1 = impulssvar(t,A,tao1,5);
-I2 = impulssvar(t,A,tao2,5);
-I3 = impulssvar(t,A,tao3,5);
-I4 = impulssvar(t,A,tao4,5);
+imp = @(t, tao) sum(A' .* exp(-t./tao'));
 
-plot(t,I1)
-hold on
-plot(t,I2)
-plot(t,I3)
-plot(t,I4)
+t = 0:500;
+U = [0, 140, 560, 1680];
+
+for u = U
+    I = imp(t, tao(u));
+    plot(t, I), hold on
+end
 
 legend('U = 0','U = 140','U = 560','U = 1680')
 
@@ -123,36 +120,27 @@ clc, clear, clf
 A = [0.113 0.213 0.258 0.273 0.1430];
 tao_0 = [2.0 12.2 50.4 243.3 Inf];
 k = 3.06*1e-3;
-T = 500;
 M0 = 630;
 global CO2Emissions;
 global CO2ConcRCP45;
+
 U = CO2Emissions;
 
-%Tidskonstant
-tao = @(t) tao_0*(1 + k * sum(U(1:t)));
+t = 1:length(U);
 
-%Impulssvaret
-t = 0:T;
-I = impulssvar(t,A,tao,5);
+tao = @(t_hat) tao_0 .* (1 + k * cumsum(U))';
+I = @(t, t_hat) sum(A' .* exp(-t./tao(t_hat)'));
+M = @(t) M0 + cumsum(I(flip(t), t) .* U);
 
+conc = 0.469 * M(t);
 
-%Tidsdiskret faltning
-M = faltning(t,M0,U,T,A,tao);
-
-conc = 0.469 * M;
-
-plot(t,conc,'DisplayName','Estimate');
+years = 1765:2500;
+plot(years,conc,'DisplayName','Our model');
 hold on
-plot(t,CO2ConcRCP45(1:501),'DisplayName','Actual');
+plot(years,CO2ConcRCP45(1:length(t)),'DisplayName','RCP4.5');
 legend show
- 
-
-
-
-
-
-
+legend('Location','southeast')
+xlabel('Year'), ylabel('CO_2 concentration (ppm)')
 
 
 
