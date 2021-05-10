@@ -81,8 +81,6 @@ for b = 1:length(beta)
 
 end
 
-%plot(t,CO2ConcRCP45,'k--','DisplayName','Actual','LineWidth',2)
-
 hold off
 legend('Location','northwest')
 
@@ -120,30 +118,84 @@ clc, clear, clf
 A = [0.113 0.213 0.258 0.273 0.1430];
 tao_0 = [2.0 12.2 50.4 243.3 Inf];
 k = 3.06*1e-3;
-M0 = 630;
+M0 = 600;
 global CO2Emissions;
 global CO2ConcRCP45;
 
 U = CO2Emissions;
 
-t = 1:length(U);
+T = 1:length(U);
 
-tao = @(t_hat) tao_0 .* (1 + k * cumsum(U))';
+tao = @(t_hat) tao_0 .* (1 + k * sum(U(1:t_hat)))';  % ha inte med årets utsläpp
 I = @(t, t_hat) sum(A' .* exp(-t./tao(t_hat)'));
-M = @(t) M0 + cumsum(I(flip(t), t) .* U);
-
-conc = 0.469 * M(t);
+M = M0 * ones(1, length(U));
+for t = T
+    for delta_t = t:-1:1
+        M(t) = M(t) + I(t-delta_t, t) * U(delta_t);
+    end
+end
+conc = 0.469 * M;
 
 years = 1765:2500;
 plot(years,conc,'DisplayName','Our model');
 hold on
-plot(years,CO2ConcRCP45(1:length(t)),'DisplayName','RCP4.5');
-legend show
+plot(years,CO2ConcRCP45(1:length(T)),'DisplayName','RCP4.5');
 legend('Location','southeast')
 xlabel('Year'), ylabel('CO_2 concentration (ppm)')
 
 
+%% Uppgift 1.6
+clc, clear, clf
 
+%Parametrar
+F = [0 60 0; 15 0 45; 45 0 0]; %GtC
+NPP0 = F(1,2);
+beta = 0.35; %Kan variera mellan 0.1 och 0.8
+B0 = [600 600 1500]; %GtC
+A = [0.113 0.213 0.258 0.273 0.1430];
+tao_0 = [2.0 12.2 50.4 243.3 Inf];
+k = 3.06*1e-3;
+M0 = 600;
+global CO2Emissions;
+global CO2ConcRCP45;
+
+U = CO2Emissions;
+
+%Nettoprimärproduktion av biomassa (fotosyntes)
+NPP = @(B1) NPP0*(1+beta*log(B1/B0(1)));
+
+%Flödeskoefficienter
+alpha = @(i,j) F(i,j)/B0(i);
+
+%Differentialekvationer
+dB1 = @(B,t) alpha(3,1)*B(3,:) + alpha(2,1)*B(2,:) - NPP(B(1,:)) + CO2Emissions(t);
+dB2 = @(B,t) NPP(B(1,:)) - alpha(2,3)*B(2,:) - alpha(2,1)*B(2,:);
+dB3 = @(B,t) alpha(2,3)*B(2,:) - alpha(3,1)*B(3,:);
+
+dB = @(B,t) [dB1(B,t); dB2(B,t); dB3(B,t)];
+
+%Lösning
+B = eulerforward(B0, dB);
+
+T = 1:length(U);
+tao = @(t_hat) tao_0 .* (1 + k * sum(U(1:t_hat)))';
+I = @(t, t_hat) sum(A' .* exp(-t./tao(t_hat)'));
+M = M0 * ones(1, length(U));
+for t = T
+    for t_tilde = t:-1:1
+        M(t) = M(t) + I(t-t_tilde, t)' * dB1(B(:,t_tilde),t_tilde);
+    end
+end
+conc = 0.469 * M;
+
+years = 1765:2500;
+plot(years,conc,'DisplayName','Our model');
+hold on
+plot(years,CO2ConcRCP45(1:length(T)),'DisplayName','RCP4.5');
+legend('Location','southeast')
+xlabel('Year'), ylabel('CO_2 concentration (ppm)')
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
