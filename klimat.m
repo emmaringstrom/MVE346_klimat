@@ -161,7 +161,7 @@ global CO2Emissions;
 global CO2ConcRCP45;
 
 for beta = [0.35 0.28] %[0.38 0.34]
-    %Nettoprimärproduktion av biomassa (fotosyntes)
+    
     NPP = @(B) NPP0*(1+beta*log(B(1)/B0(1)));
 
     %Flödeskoefficienter
@@ -174,23 +174,24 @@ for beta = [0.35 0.28] %[0.38 0.34]
     dB3 = @(B,t) alpha(2,3)*B(2) - alpha(3,1)*B(3);
     dB = @(B,t) [dB1(B,t); dB2(B,t); dB3(B,t)];
 
-    % tao och I, bytt ut U -> dB1
-    tao = @(t_hat, B) tao_0 .* (1 + k * sum(dB1(B, 1:t_hat-1)))'; 
-    I = @(t, t_hat, B) sum(A' .* exp(-t./tao(t_hat, B)'));
-
     % -- lösning --
     B = zeros(3, length(CO2Emissions));    % 3 x 736 matris för alla B
     B(:, 1) = B0(:);    % sätt startvärden
-
+    emissions = zeros(1, length(CO2Emissions));
     for t = 1:length(CO2Emissions)-1   % 1:735
-        
         M = M0;
         for t_tilde = 1:t
-            M = M + I(t-t_tilde, t, B) * dB1(B(:,t_tilde), t_tilde);
+            I = sum(A' .* exp(-(t-t_tilde) ./ (tao_0*(1+k*emissions(t)))'));
+            M = M + I * dB1(B(:, t_tilde), t_tilde);
         end
- 
-        B(1, t) = M; % + dB1(B(:,t), t);
+      
         B(:, t+1) = B(:, t) + dB(B(:, t), t);
+        
+        % kumulativa utsläpp (utan haven)
+        emissions(t+1) = emissions(t) + dB1(B(:, t), t);
+        
+        % B1 med haven
+        B(1, t+1) = M;
     end
     
     % Koncentrationerna
@@ -203,6 +204,7 @@ for beta = [0.35 0.28] %[0.38 0.34]
 end
 axis([1700 2500 0 600])
 plot(t,CO2ConcRCP45, 'DisplayName', 'RCP4.5')
+%plot(t,emissions*0.469, 'DisplayName', 'emissions')
 legend('Location','southeast')
 xlabel('Year'), ylabel('CO_2 concentration (ppm)')
 
@@ -428,3 +430,16 @@ end
 
 plot(nasaT, TAnomali, 'DisplayName', 'Nasa')
 legend show
+
+
+
+
+
+
+
+
+
+
+
+
+
