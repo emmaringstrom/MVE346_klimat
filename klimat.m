@@ -45,45 +45,50 @@ clc, clear, clf
 %Parametrar
 F = [0 60 0; 15 0 45; 45 0 0]; %GtC
 NPP0 = F(1,2);
-beta = linspace(0.1,0.8,5);
+beta = linspace(0.1,0.8,4);
 B0 = [600 600 1500]; %GtC
 global CO2Emissions;
 global CO2ConcRCP45;
 
-col = ['m','g','b','r','c'];
+col = ['m','g','r'];
+box = ["Atmosphere", "Biomass", "Underground"];
 
 for b = 1:length(beta)
+    for i = 1:3
 
-    %Nettoprimärproduktion av biomassa (fotosyntes)
-    NPP = @(B1) NPP0*(1+beta(b)*log(B1/B0(1)));
+        %Nettoprimärproduktion av biomassa (fotosyntes)
+        NPP = @(B1) NPP0*(1+beta(b)*log(B1/B0(1)));
 
-    %Flödeskoefficienter
-    alpha = @(i,j) F(i,j)/B0(i);
+        %Flödeskoefficienter
+        alpha = @(i,j) F(i,j)/B0(i);
 
-    %Differentialekvationer
-    dB1 = @(B,t) alpha(3,1)*B(3,:) + alpha(2,1)*B(2,:) - NPP(B(1,:)) + CO2Emissions(t);
-    dB2 = @(B,t) NPP(B(1,:)) - alpha(2,3)*B(2,:) - alpha(2,1)*B(2,:);
-    dB3 = @(B,t) alpha(2,3)*B(2,:) - alpha(3,1)*B(3,:);
+        %Differentialekvationer
+        dB1 = @(B,t) alpha(3,1)*B(3,:) + alpha(2,1)*B(2,:) - NPP(B(1,:)) + CO2Emissions(t);
+        dB2 = @(B,t) NPP(B(1,:)) - alpha(2,3)*B(2,:) - alpha(2,1)*B(2,:);
+        dB3 = @(B,t) alpha(2,3)*B(2,:) - alpha(3,1)*B(3,:);
 
-    dB = @(B,t) [dB1(B,t); dB2(B,t); dB3(B,t)];
+        dB = @(B,t) [dB1(B,t); dB2(B,t); dB3(B,t)];
 
-    %Lösning
-    B = eulerforward(B0, dB);
+        %Lösning
+        B = eulerforward(B0, dB);
 
-    %Koncentrationerna
-    conc = 0.469 * B(2,:); %ppm C02
+        %Koncentrationerna
+        conc = 0.469 * B(i,:); %ppm C02
 
-    %Plot
-    t = 1765:2500;
-    txt = ['beta = ',num2str(beta(b))];
-    plot(t,conc,col(b),'DisplayName',txt)
-    hold on
-
+        %Plot
+        t = 1765:2500;
+        subplot(2,2,b)
+        name = box(i);
+        plot(t,conc,col(i),'DisplayName',name)
+        hold on
+        title(['\beta = ', num2str(beta(b))])
+        legend('Location','northwest')
+        xlabel('Year'), ylabel('CO_2 concentration (ppm)')
+    end
 end
 
-hold off
-legend('Location','northwest')
-xlabel('Year'), ylabel('CO_2 concentration (ppm)')
+
+
 
 
 %% Uppgift 1.3
@@ -475,7 +480,7 @@ scenario1 = [CO2Emissions(1:2021-1765-1), linspace(CO2today,0,49), zeros(1,130)]
 scenario2 = [CO2Emissions(1:2021-1765-1), CO2today * ones(1,179)];
 scenario3 = [CO2Emissions(1:2021-1765-1), linspace(CO2today,CO2today*2.5,79), CO2today*2.5*ones(1,100)];
 
-CO2scenarios = [scenario1; scenario2; scenario3] %CO2Emissions(1:2200-1765-1)];
+CO2scenarios = [scenario1; scenario2; scenario3]; %CO2Emissions(1:2200-1765-1)];
 
 %Nettoprimärproduktion av biomassa (fotosyntes)
 NPP = @(B) NPP0*(1+beta*log(B(1)/B0(1)));
@@ -548,7 +553,7 @@ for j = 1:3
             delta_T(:, t+1) = delta_T(:,t) + d_delta_T(t, delta_T(:,t));
         end
         
-        subplot(1,3,j)
+        subplot(3,1,j)
         T = (1:length(U)) + 1764; %1765:2200;
         plot(T, delta_T(1,:), 'DisplayName', ['scenario ', num2str(i)])
         title(['\lambda = ', num2str(lambda(j)), ', \kappa = ', num2str(kappa(j)), ', s = ', num2str(s(j))])
@@ -657,7 +662,7 @@ for j = 1:3
             delta_T(:, t+1) = delta_T(:,t) + d_delta_T(t, delta_T(:,t));
         end
         
-        subplot(1,3,j)
+        subplot(3,1,j)
         T = (1:length(U)) + 1764; %1765:2200;
         plot(T, delta_T(1,:), 'DisplayName', ['scenario ', num2str(i)])
         title(['\lambda = ', num2str(lambda(j)), ', \kappa = ', num2str(kappa(j)), ', s = ', num2str(s(j))])
